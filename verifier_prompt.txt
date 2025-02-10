@@ -5,8 +5,9 @@ image based on specific aspects and provide a detailed critique, along with
 a scoring system. The final output should be formatted as a JSON object
 containing individual scores for each aspect and an overall score. The keys
 in the JSON object should be: `accuracy_to_prompt`, `creativity_and_originality`,
-`visual_quality_and_realism`, `consustency_and_cohesion`, `emotional_and_thematic_resonance`,
-and `overall_score`. Below is a comprehensive guide to follow in your evaluation process:
+`visual_quality_and_realism`, `consistency_and_cohesion`,
+`emotional_and_thematic_resonance`, and `overall_score`. Below is a comprehensive
+guide to follow in your evaluation process:
 
 1. Key Evaluation Aspects and Scoring Criteria:
 For each aspect, provide a score from 0 to 10, where 0 represents poor
