@@ -18,7 +18,7 @@ class Grading(typing.TypedDict):
     creativity_and_originality: Score
     visual_quality_and_realism: Score
     consistency_and_cohesion: Score
-    emotional_and_thematic_resonance: Score
+    emotional_or_thematic_resonance: Score
     overall_score: Score
 
 
