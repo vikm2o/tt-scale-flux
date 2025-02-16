@@ -138,12 +138,12 @@ This should output a collage of the best images generated in each search round, 
 
 ## Controlling the pipeline checkpoint and `__call__()` args
 
-This is controlled via the `--pipeline_config_path` CLI args. By default, it uses [`configs/flux.1_dev.json`](./configs/flux.1_dev.json). You can either modify this one or create your own JSON file to experiment with different pipelines. We provide some predefined configs for Flux.1-Dev, PixArt-Sigma, SDXL, and SD v1.5.
+This is controlled via the `--pipeline_config_path` CLI args. By default, it uses [`configs/flux.1_dev.json`](./configs/flux.1_dev.json). You can either modify this one or create your own JSON file to experiment with different pipelines. We provide some predefined configs for Flux.1-Dev, PixArt-Sigma, SDXL, and SD v1.5 in the [`configs`](./conf) directory.
 
 The above-mentioned pipelines are already supported. To add your own, you need to make modifications to:
 
-* TODO1
-* TODO2
+* [`MODEL_NAME_MAP`](https://github.com/sayakpaul/tt-scale-flux/blob/8e4ba232fbdfeb7a6879049d3b5765f81969ddf3/utils.py#L16)
+* [`get_latent_prep_fn()`](https://github.com/sayakpaul/tt-scale-flux/blob/8e4ba232fbdfeb7a6879049d3b5765f81969ddf3/utils.py#L125C5-L125C23)
 
 ## Controlling the "scale"
 
