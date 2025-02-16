@@ -8,20 +8,96 @@ import json
 from typing import Union
 from PIL import Image
 import requests
+import argparse
 import io
 
 
+TORCH_DTYPE_MAP = {"fp32": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}
+MODEL_NAME_MAP = {
+    "black-forest-labs/FLUX.1-dev": "flux.1-dev",
+    "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS": "pixart-sigma-1024-ms",
+    "stabilityai/stable-diffusion-xl-base-1.0": "sdxl-base",
+    "stable-diffusion-v1-5/stable-diffusion-v1-5": "sd-v1.5",
+}
+
+
+def parse_cli_args():
+    """
+    Parse and return CLI arguments.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--pipeline_config_path",
+        type=str,
+        default="configs/flux.1_dev.json",
+        help="Pipeline configuration path that should include loading info and __call__() args and their values.",
+    )
+    parser.add_argument(
+        "--search_rounds",
+        type=int,
+        default=4,
+        help="Number of search rounds (each round scales the number of noise samples).",
+    )
+    parser.add_argument("--prompt", type=str, default=None, help="Use your own prompt.")
+    parser.add_argument(
+        "--num_prompts",
+        type=lambda x: None if x.lower() == "none" else x if x.lower() == "all" else int(x),
+        default=2,
+        help="Number of prompts to use (or 'all' to use all prompts from file).",
+    )
+    parser.add_argument(
+        "--max_new_tokens",
+        type=int,
+        default=300,
+        help="Maximum number of tokens for the verifier. Ignored when using Gemini.",
+    )
+    parser.add_argument(
+        "--use_low_gpu_vram",
+        action="store_true",
+        help="Flag to use low GPU VRAM mode (moves models between cpu and cuda as needed). Ignored when using Gemini.",
+    )
+    parser.add_argument(
+        "--choice_of_metric",
+        type=str,
+        default="overall_score",
+        choices=[
+            "accuracy_to_prompt",
+            "creativity_and_originality",
+            "visual_quality_and_realism",
+            "consistency_and_cohesion",
+            "emotional_or_thematic_resonance",
+            "overall_score",
+        ],
+        help="Metric to use from the LLM grading. When implementing something custom, feel free to relax these.",
+    )
+    parser.add_argument(
+        "--verifier_to_use",
+        type=str,
+        default="gemini",
+        choices=["gemini", "qwen"],
+        help="Verifier to use; must be one of 'gemini' or 'qwen'.",
+    )
+    args = parser.parse_args()
+
+    if args.prompt and args.num_prompts:
+        raise ValueError("Both `prompt` and `num_prompts` cannot be specified.")
+    if not args.prompt and not args.num_prompts:
+        raise ValueError("Both `prompt` and `num_prompts` cannot be None.")
+    return args
+
+
 # Adapted from Diffusers.
-def prepare_latents(
+def prepare_latents_for_flux(
     batch_size: int,
     height: int,
     width: int,
-    num_latent_channels: int,
-    vae_scale_factor,
     generator: torch.Generator,
     device: str,
     dtype: torch.dtype,
 ) -> torch.Tensor:
+    num_latent_channels = 16
+    vae_scale_factor = 8
+
     height = 2 * (int(height) // (vae_scale_factor * 2))
     width = 2 * (int(width) // (vae_scale_factor * 2))
     shape = (batch_size, num_latent_channels, height, width)
@@ -30,31 +106,56 @@ def prepare_latents(
     return latents
 
 
+# Adapted from Diffusers.
+def prepare_latents(
+    batch_size: int, height: int, width: int, generator: torch.Generator, device: str, dtype: torch.dtype
+):
+    num_channels_latents = 4
+    vae_scale_factor = 8
+    shape = (
+        batch_size,
+        num_channels_latents,
+        int(height) // vae_scale_factor,
+        int(width) // vae_scale_factor,
+    )
+    latents = randn_tensor(shape, generator=generator, device=torch.device(device), dtype=dtype)
+    return latents
+
+
+def get_latent_prep_fn(pretrained_model_name_or_path: str) -> callable:
+    fn_map = {
+        "black-forest-labs/FLUX.1-dev": prepare_latents_for_flux,
+        "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS": prepare_latents,
+        "stabilityai/stable-diffusion-xl-base-1.0": prepare_latents,
+        "stable-diffusion-v1-5/stable-diffusion-v1-5": prepare_latents,
+    }[pretrained_model_name_or_path]
+    return fn_map
+
+
 def get_noises(
     max_seed: int,
     num_samples: int,
     height: int,
     width: int,
-    num_latent_channels: int,
-    vae_scale_factor: int,
     device="cuda",
-    dtype=torch.bfloat16,
+    dtype: torch.dtype = torch.bfloat16,
+    fn: callable = prepare_latents_for_flux,
 ) -> Dict[int, torch.Tensor]:
     seeds = torch.randint(0, high=max_seed, size=(num_samples,))
     print(f"{seeds=}")
-    noises = {
-        int(noise_seed): prepare_latents(
+
+    noises = {}
+    for noise_seed in seeds:
+        latents = fn(
             batch_size=1,
             height=height,
             width=width,
-            num_latent_channels=num_latent_channels,
-            vae_scale_factor=vae_scale_factor,
             generator=torch.manual_seed(int(noise_seed)),
             device=device,
             dtype=dtype,
         )
-        for noise_seed in seeds
-    }
+        noises.update({int(noise_seed): latents})
+
     assert len(noises) == len(seeds)
     return noises
 

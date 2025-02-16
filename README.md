@@ -7,6 +7,10 @@ Simple re-implementation of inference-time scaling Flux.1-Dev as introduced in [
 <p><i>Photo of an athlete cat explaining it’s latest scandal at a press conference to journalists.</i></p>
 </div>
 
+**Updates**
+
+🔥 15/02/2025: Support to load other pipelines has been added in [this PR](https://github.com/sayakpaul/tt-scale-flux/pull/5)! [Result section](#more-results) has been updated, too.
+
 ## Getting started
 
 Make sure to install the dependencies: `pip install -r requirements`. The codebase was tested using a single H100 and two H100s (both 80GB variants).
@@ -34,7 +38,7 @@ After this is done executing, you should expect a folder named `output` with the
 <summary>Click to expand</summary>
 
 ```bash
-output/gemini/overall_score/20250213_034054$ tree 
+output/flux.1-dev/gemini/overall_score/20250215_141308$ tree 
 .
 ├── prompt@Photo_of_an_athlete_cat_explaining_it_s_latest_scandal_at_a_press_conference_to_journ_hash@b9094b65_i@1_s@1039315023.png
 ├── prompt@Photo_of_an_athlete_cat_explaining_it_s_latest_scandal_at_a_press_conference_to_journ_hash@b9094b65_i@1_s@77559330.json
@@ -96,7 +100,33 @@ Each JSON file should look like so:
 
 </details>
 
-To limit the number of prompts, specify `--num_prompts`. By default, we use 2 prompts. Specify "--num_prompts=all" to use all.
+To limit the number of prompts, specify `--num_prompts`. By default, we use 2 prompts. Specify "--num_prompts=all" to use all. 
+
+The output directory should also contain a `config.json`, looking like so:
+
+<details>
+<summary>Click to expand</summary>
+
+```json
+{
+  "max_new_tokens": 300,
+  "use_low_gpu_vram": false,
+  "choice_of_metric": "overall_score",
+  "verifier_to_use": "gemini",
+  "torch_dtype": "bf16",
+  "height": 1024,
+  "width": 1024,
+  "max_sequence_length": 512,
+  "guidance_scale": 3.5,
+  "num_inference_steps": 50,
+  "pipeline_config_path": "configs/flux.1_dev.json",
+  "search_rounds": 4,
+  "prompt": "an anime illustration of a wiener schnitzel",
+  "num_prompts": null
+}
+```
+
+</details>
 
 Once the results are generated, process the results by running:
 
@@ -105,6 +135,15 @@ python process_results.py --path=path_to_the_output_dir
 ```
 
 This should output a collage of the best images generated in each search round, grouped by the same prompt.
+
+## Controlling the pipeline checkpoint and `__call__()` args
+
+This is controlled via the `--pipeline_config_path` CLI args. By default, it uses [`configs/flux.1_dev.json`](./configs/flux.1_dev.json). You can either modify this one or create your own JSON file to experiment with different pipelines. We provide some predefined configs for Flux.1-Dev, PixArt-Sigma, SDXL, and SD v1.5.
+
+The above-mentioned pipelines are already supported. To add your own, you need to make modifications to:
+
+* TODO1
+* TODO2
 
 ## Controlling the "scale"
 
@@ -135,6 +174,8 @@ By default, we use "overall_score" as the metric to obtain the best samples in e
 * "emotional_or_thematic_resonance"
 * "overall_score"
 
+If you're experimenting with a new verifier, you can relax these choices.
+
 The verifier prompt that is used during grading/verification is specified in [this file](./verifiers/verifier_prompt.txt). The prompt is a slightly modified version of the one specified in the Figure 16 of
 the paper (Inference-Time Scaling for Diffusion Models beyond Scaling Denoising Steps). You are welcome to 
 experiment with a different prompt.
@@ -160,6 +201,13 @@ experiment with a different prompt.
       <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/collage_Alice_in_a_vibrant_dreamlike_digital_painting_inside_the_Nemo_Nautilus_submarine__i@1-4.jpeg" alt="Alice" width="650">
       <br>
       <i>Alice in a vibrant, dreamlike digital painting inside the Nemo Nautilus submarine.</i>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/flux_collage_an_anime_illustration_of_a_wiener_schnitzel_i%401-4.png" alt="wiener_schnitzel" width="650">
+      <br>
+      <i>an anime illustration of a wiener schnitzel</i>
     </td>
   </tr>
 </table>
@@ -189,6 +237,69 @@ between the outputs of different metrics -- "overall_score" vs. "emotional_or_th
 </table>
 
 </details>
+
+### Results from other models
+
+<details>
+<summary>PixArt-Sigma</summary>
+
+<table>
+  <tr>
+    <th>Result</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/pixart_collage_A_person_playing_saxophone__i%401-4.png" alt="saxophone" width="650">
+      <br>
+      <i>A person playing saxophone.</i>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/pixart_collage_Photo_of_an_athlete_cat_explaining_it_s_latest_scandal_at_a_press_conference_to_journ_i%401-4.jpeg" alt="scandal_cat" width="650">
+      <br>
+      <i>Photo of an athlete cat explaining it’s latest scandal at a press conference to journalists.</i>
+    </td>
+  </tr>
+</table>
+
+</details><br>
+
+<details>
+<summary>SD v1.5</summary>
+
+<table>
+  <tr>
+    <th>Result</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/sd_collage_a_photo_of_an_astronaut_riding_a_horse_on_mars_i%401-6.png" alt="saxophone" width="650">
+      <br>
+      <i>a photo of an astronaut riding a horse on mars</i>
+    </td>
+  </tr>
+</table>
+
+</details><br>
+
+<details>
+<summary>SDXL-base</summary>
+
+<table>
+  <tr>
+    <th>Result</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://huggingface.co/datasets/sayakpaul/sample-datasets/resolve/main/tt-scale-flux/sdxl_collage_Photo_of_an_athlete_cat_explaining_it_s_latest_scandal_at_a_press_conference_to_journ_i%401-6.jpeg" alt="scandal_cat" width="650">
+      <br>
+      <i>Photo of an athlete cat explaining it’s latest scandal at a press conference to journalists.</i>
+    </td>
+  </tr>
+</table>
+
+</details><br>
 
 ## Acknowledgements
 
