@@ -19,7 +19,7 @@ Simple re-implementation of inference-time scaling Flux.1-Dev as introduced in [
 
 Make sure to install the dependencies: `pip install -r requirements`. The codebase was tested using a single H100 and two H100s (both 80GB variants).
 
-By default, we use [Gemini 2.0 Flash](https://deepmind.google/technologies/gemini/flash/) as the verifier. This requires two things:
+By default, we use [Gemini 2.0 Flash](https://deepmind.google/technologies/gemini/flash/) as the verifier (you [can use](#controlling-the-verifier) Qwen2.5, too). This requires two things:
 
 * `GEMINI_API_KEY` (obtain it from [here](https://ai.google.dev/gemini-api/docs)).
 * `google-genai` Python [library](https://pypi.org/project/google-genai/).
