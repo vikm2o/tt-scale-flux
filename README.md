@@ -9,6 +9,9 @@ Simple re-implementation of inference-time scaling Flux.1-Dev as introduced in [
 
 **Updates**
 
+🔥 27/02/2025: [MaximClouser](https://github.com/MaximClouser) implemented a ComfyUI node for inference-time
+scaling in [this repo](https://github.com/YRIKKA/ComfyUI-InferenceTimeScaling). Check it out!
+
 🔥 16/02/2025: Support for batched image generation has been added [in this PR](https://github.com/sayakpaul/tt-scale-flux/pull/9). It speeds up the total time but consumes more memory.
 
 🔥 15/02/2025: Support for structured generation with Qwen2.5 has been added (using `outlines` and `pydantic`) in [this PR](https://github.com/sayakpaul/tt-scale-flux/pull/6).
