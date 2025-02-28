@@ -17,6 +17,10 @@ But it's been growing now! Check out the rest of the README to know more 🤗
 🔥 27/02/2025: [MaximClouser](https://github.com/MaximClouser) implemented a ComfyUI node for inference-time
 scaling in [this repo](https://github.com/YRIKKA/ComfyUI-InferenceTimeScaling). Check it out!
 
+🔥 25/02/2025: Support for zero-order search has been added [in this PR](https://github.com/sayakpaul/tt-scale-flux/pull/14). Many thanks to Willis Ma for the reviews. Check out [this section](#controlling-search) for more details.
+
+🔥 21/02/2025: Better configuration management for more flexibility, free the `argparse` madness.
+
 🔥 16/02/2025: Support for batched image generation has been added [in this PR](https://github.com/sayakpaul/tt-scale-flux/pull/9). It speeds up the total time but consumes more memory.
 
 🔥 15/02/2025: Support for structured generation with Qwen2.5 has been added (using `outlines` and `pydantic`) in [this PR](https://github.com/sayakpaul/tt-scale-flux/pull/6).
@@ -270,6 +274,36 @@ If you're experimenting with a new verifier, you can relax these choices.
 The verifier prompt that is used during grading/verification is specified in [this file](./verifiers/verifier_prompt.txt). The prompt is a slightly modified version of the one specified in the Figure 16 of
 the paper (Inference-Time Scaling for Diffusion Models beyond Scaling Denoising Steps). You are welcome to 
 experiment with a different prompt.
+
+### Controlling search
+
+You can configure search related arguments through `search_args` in the configuration file. Currently,
+"random search" and "zero-order search" are supported. The default configurations provided
+under [`configs/`](./configs/) are all for random search.
+
+Below is a configuration for zero-order search:
+
+```json
+"search_args": {
+  "search_method": "zero-order",
+  "search_rounds": 4,
+  "threshold": 0.95,
+  "num_neighbors": 4
+}
+```
+
+<details>
+<summary>For details about the parameters</summary>
+
+* `threshold`: threshold to use for filtering out neighbor candidates from the base noise
+* `num_neighbors`: number of neighbors to generate from the base noise
+
+</details>
+
+> [!NOTE] 
+> If the neighbors in the current round do not improve the current search round results, 
+we simply reject the round, starting the next round with a new base nosie. In case of 
+worse neighbors, we don't serialize the artifacts.
 
 ## More results
 

@@ -10,6 +10,8 @@ from PIL import Image
 import requests
 import argparse
 import io
+import numpy as np
+import torch.nn.functional as F
 
 
 TORCH_DTYPE_MAP = {"fp32": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}
@@ -73,24 +75,39 @@ def validate_args(args):
         config = json.load(f)
 
     config_keys = list(config.keys())
-    assert all(
-        element in config_keys for element in MANDATORY_CONFIG_KEYS
-    ), f"Expected the following keys to be present: {MANDATORY_CONFIG_KEYS} but got: {config_keys}."
+    assert all(element in config_keys for element in MANDATORY_CONFIG_KEYS), (
+        f"Expected the following keys to be present: {MANDATORY_CONFIG_KEYS} but got: {config_keys}."
+    )
 
+    _validate_verifier_args(config)
+    _validate_search_args(config)
+
+
+def _validate_verifier_args(config):
     from verifiers import SUPPORTED_VERIFIERS, SUPPORTED_METRICS
 
     verifier_args = config["verifier_args"]
     supported_verifiers = list(SUPPORTED_VERIFIERS.keys())
     verifier = verifier_args["name"]
-    assert (
-        verifier in supported_verifiers
-    ), f"Unknown verifier provided: {verifier}, supported ones are: {supported_metrics}."
+    assert verifier in supported_verifiers, (
+        f"Unknown verifier provided: {verifier}, supported ones are: {supported_metrics}."
+    )
 
     supported_metrics = SUPPORTED_METRICS[verifier_args["name"]]
     choice_of_metric = verifier_args["choice_of_metric"]
-    assert (
-        choice_of_metric in supported_metrics
-    ), f"Unsupported metric provided: {choice_of_metric}, supported ones are: {supported_metrics}."
+    assert choice_of_metric in supported_metrics, (
+        f"Unsupported metric provided: {choice_of_metric}, supported ones are: {supported_metrics}."
+    )
+
+
+def _validate_search_args(config):
+    search_args = config["search_args"]
+    search_method = search_args["search_method"]
+    supported_search_methods = ["random", "zero-order"]
+
+    assert search_method in supported_search_methods, (
+        f"Unsupported search method provided: {search_method}, supported ones are: {supported_search_methods}."
+    )
 
 
 # Adapted from Diffusers.
@@ -166,6 +183,23 @@ def get_noises(
     return noises
 
 
+def generate_neighbors(x, threshold=0.95, num_neighbors=4):
+    """Courtesy: Willis Ma"""
+    rng = np.random.Generator(np.random.PCG64())
+    x_f = x.flatten(1)
+    x_norm = torch.linalg.norm(x_f, dim=-1, keepdim=True, dtype=torch.float64).unsqueeze(-2)
+    u = x_f.unsqueeze(-2) / x_norm.clamp_min(1e-12)
+    v = torch.from_numpy(rng.standard_normal(size=(u.shape[0], num_neighbors, u.shape[-1]), dtype=np.float64)).to(
+        u.device
+    )
+    w = F.normalize(v - (v @ u.transpose(-2, -1)) * u, dim=-1)
+    return (
+        (x_norm * (threshold * u + np.sqrt(1 - threshold**2) * w))
+        .reshape(x.shape[0], num_neighbors, *x.shape[1:])
+        .to(x.dtype)
+    )
+
+
 def load_verifier_prompt(path: str) -> str:
     with open(path, "r") as f:
         verifier_prompt = f.read().replace('"""', "")
@@ -215,3 +249,27 @@ def recover_json_from_output(output: str):
     end = output.rfind("}") + 1
     json_part = output[start:end]
     return json.loads(json_part)
+
+
+def serialize_artifacts(
+    images_info: list[tuple[int, torch.Tensor, Image.Image, str]],
+    prompt: str,
+    search_round: int,
+    root_dir: str,
+    datapoint: dict,
+) -> None:
+    """
+    Serialize generated images and the best datapoint JSON configuration.
+    """
+    # Save each image.
+    for seed, noise, image, filename in images_info:
+        image.save(filename)
+
+    # Save the best datapoint config as a JSON file.
+    best_json_filename = datapoint["best_img_path"].replace(".png", ".json")
+    with open(best_json_filename, "w") as f:
+        # Remove the noise tensor (or any non-serializable object) from the JSON.
+        datapoint_copy = datapoint.copy()
+        datapoint_copy.pop("best_noise", None)
+        json.dump(datapoint_copy, f, indent=4)
+    print(f"Serialized JSON configuration and images to {root_dir}.")
