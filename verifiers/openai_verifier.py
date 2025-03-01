@@ -1,12 +1,11 @@
-from google import genai
-from google.genai import types
-import typing_extensions as typing
-import json
+from openai import OpenAI
+from pydantic import BaseModel
 import os
-import sys
 from typing import Union
 from PIL import Image
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -14,17 +13,16 @@ root_dir = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, current_dir)
 sys.path.insert(0, root_dir)
 
-
 from base_verifier import BaseVerifier
 from utils import convert_to_bytes
 
 
-class Score(typing.TypedDict):
+class Score(BaseModel):
+    score: int
     explanation: str
-    score: float
 
 
-class Grading(typing.TypedDict):
+class Grading(BaseModel):
     accuracy_to_prompt: Score
     creativity_and_originality: Score
     visual_quality_and_realism: Score
@@ -33,7 +31,7 @@ class Grading(typing.TypedDict):
     overall_score: Score
 
 
-class GeminiVerifier(BaseVerifier):
+class OpenAIVerifier(BaseVerifier):
     SUPPORTED_METRIC_CHOICES = [
         "accuracy_to_prompt",
         "creativity_and_originality",
@@ -43,48 +41,47 @@ class GeminiVerifier(BaseVerifier):
         "overall_score",
     ]
 
-    def __init__(self, seed=1994, model_name="gemini-2.0-flash", **kwargs):
+    def __init__(self, seed=1994, model_name="gpt-4o-2024-11-20", **kwargs):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
-        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        self.generation_config = types.GenerateContentConfig(
-            system_instruction=self.verifier_prompt,
-            response_mime_type="application/json",
-            response_schema=list[Grading],
-            max_output_tokens=kwargs.pop("max_new_tokens", None),
-            seed=seed,
-        )
         self.model_name = model_name
+        self.seed = seed
 
     def prepare_inputs(self, images: Union[list[Image.Image], Image.Image], prompts: Union[list[str], str], **kwargs):
         """Prepare inputs for the API from a given prompt and image."""
         inputs = []
         images = images if isinstance(images, list) else [images]
         prompts = prompts if isinstance(prompts, list) else [prompts]
+
         for prompt, image in zip(prompts, images):
-            part = [
-                types.Part.from_text(text=prompt),
-                types.Part.from_bytes(data=convert_to_bytes(image), mime_type="image/png"),
-            ]
-            inputs.extend(part)
+            # Convert image to base64
+            base64_image = convert_to_bytes(image, b64_encode=True)
+
+            message = {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                ],
+            }
+            inputs.append(message)
 
         return inputs
 
     def score(self, inputs, **kwargs) -> list[dict[str, float]]:
-        # Group the flat list into consecutive chunks of 2.
-        def call_generate_content(parts):
-            content = types.Content(parts=parts, role="user")
-            response = self.client.models.generate_content(
-                model=self.model_name, contents=content, config=self.generation_config
-            )
-            return response.parsed[0]
+        system_message = {"role": "system", "content": self.verifier_prompt}
 
-        grouped_inputs = [inputs[i : i + 2] for i in range(0, len(inputs), 2)]
+        def call_generate_content(parts):
+            conversation = [system_message, parts]
+            response = self.client.beta.chat.completions.parse(
+                model=self.model_name, messages=conversation, temperature=1, response_format=Grading
+            )
+            return response.choices[0].message.parsed.model_dump()
+
         results = []
-        max_workers = len(grouped_inputs)
-        if max_workers > 4:
-            max_workers = 4
+        max_workers = min(len(inputs), 4)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(call_generate_content, group) for group in grouped_inputs]
+            futures = [executor.submit(call_generate_content, group) for group in inputs]
             for future in as_completed(futures):
                 try:
                     results.append(future.result())
@@ -96,7 +93,7 @@ class GeminiVerifier(BaseVerifier):
 
 # Define inputs
 if __name__ == "__main__":
-    verifier = GeminiVerifier()
+    verifier = OpenAIVerifier()
     image_urls = [
         (
             "realistic photo a shiny black SUV car with a mountain in the background.",
