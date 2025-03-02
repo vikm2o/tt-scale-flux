@@ -6,7 +6,6 @@ except Exception as e:
 try:
     from .openai_verifier import OpenAIVerifier
 except Exception as e:
-    print(f"{e=}")
     OpenAIVerifier = None
 
 try:
