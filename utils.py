@@ -248,6 +248,18 @@ def convert_to_bytes(path_or_url: Union[str, Image.Image], b64_encode: bool = Fa
     else:
         return base64.b64encode(image_bytes).decode("utf-8")
 
+def image_to_base64(image_path):
+    """Converts an image to a base64 encoded string."""
+    try:
+        with open(image_path, "rb") as image_file:
+            image_data = image_file.read()
+            return base64.b64encode(image_data).decode("utf-8")
+    except FileNotFoundError:
+        print(f"Error: Image file not found at {image_path}")
+        return None
+    except Exception as e:
+        print(f"Error encoding image: {e}")
+        return None
 
 def recover_json_from_output(output: str):
     start = output.find("{")

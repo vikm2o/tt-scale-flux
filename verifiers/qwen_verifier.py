@@ -5,7 +5,7 @@ import outlines
 import gc
 import torch
 from PIL import Image
-from typing import Union
+from typing import Union, List
 import os
 import sys
 
@@ -64,6 +64,7 @@ class Grading(BaseModel):
     visual_quality_and_realism: Score
     consistency_and_cohesion: Score
     emotional_or_thematic_resonance: Score
+    anatomical_correctness: Score
     overall_score: Score
 
 
@@ -74,12 +75,14 @@ class QwenVerifier(BaseVerifier):
         "visual_quality_and_realism",
         "consistency_and_cohesion",
         "emotional_or_thematic_resonance",
+        "anatomical_correctness",
         "overall_score",
     ]
 
     def __init__(self, seed=1994, model_name=DEFAULT_QWEN_MODEL_ID, **kwargs):
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
-
+        self.sample_files = kwargs.pop("sample_files", None)
+        
         model, processor = self.load_verifier(model_name)
 
         model_kwargs = self._prepare_model_kwargs(**kwargs)
@@ -94,6 +97,16 @@ class QwenVerifier(BaseVerifier):
         )
         self.structured_generator = outlines.generate.json(self.model, Grading)
 
+        # Load example images if provided
+        self.example_images = []
+        if self.sample_files is not None:
+            for sample_file in self.sample_files:
+                try:
+                    img = Image.open(sample_file)
+                    self.example_images.append(img)
+                except Exception as e:
+                    print(f"Error loading example image {sample_file}: {e}")
+
         del model, processor
         gc.collect()
 
@@ -106,17 +119,34 @@ class QwenVerifier(BaseVerifier):
         return model, processor
 
     def prepare_conversations(self, prompt):
-        user_content = []
+        # Start with system message
         conversation = [
             {"role": "system", "content": self.verifier_prompt},
         ]
-        user_content.append({"type": "image"})
+        
+        # Add example images if available
+        if self.example_images and len(self.example_images) > 0:
+            example_content = []
+            for img in self.example_images:
+                example_content.append({"type": "image", "image": img})
+            example_content.append({"type": "text", "text": "These are example images to check for anatomical correctness."})
+            conversation.append({"role": "user", "content": example_content})
+            conversation.append({"role": "assistant", "content": "I'll use these examples as reference for my evaluation of anatomical correctness."})
+        
+        # Add the current image and prompt to evaluate
+        user_content = []
+        user_content.append({"type": "image"})  # Placeholder for actual image
         user_content.append({"type": "text", "text": prompt})
-        user_content = {"role": "user", "content": user_content}
-        conversation.append(user_content)
+        conversation.append({"role": "user", "content": user_content})
+        
         return conversation
 
-    def prepare_inputs(self, images: Union[list[Image.Image], Image.Image], prompts: Union[list[str], str]) -> dict:
+    def prepare_inputs(self, images: Union[List[Image.Image], Image.Image], prompts: Union[List[str], str]) -> dict:
+        if isinstance(images, Image.Image):
+            images = [images]
+        if isinstance(prompts, str):
+            prompts = [prompts]
+            
         assert len(images) == len(prompts)
 
         conversations = []
@@ -125,13 +155,17 @@ class QwenVerifier(BaseVerifier):
 
         assert len(conversations) == len(images) == len(prompts)
 
-        prompts = [self.model.processor.apply_chat_template(msg, add_generation_prompt=True) for msg in conversations]
-        images = [[image] for image in images]
-        inputs = {"images": images, "prompts": prompts}
+        # Process conversations with the chat template
+        processed_prompts = [self.model.processor.apply_chat_template(msg, add_generation_prompt=True) for msg in conversations]
+        
+        # Format images as expected by the model
+        formatted_images = [[image] for image in images]
+        
+        inputs = {"images": formatted_images, "prompts": processed_prompts}
         return inputs
 
     @torch.no_grad()
-    def score(self, inputs) -> list[dict[str, float]]:
+    def score(self, inputs) -> List[dict[str, float]]:
         # TODO: might need to iterate `inputs` in batches depending on the resources.
         outputs = self.structured_generator(
             inputs["prompts"], inputs["images"], max_tokens=self.max_new_tokens, seed=self.seed

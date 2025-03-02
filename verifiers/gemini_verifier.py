@@ -17,6 +17,7 @@ sys.path.insert(0, root_dir)
 
 from base_verifier import BaseVerifier
 from utils import convert_to_bytes
+from utils import image_to_base64
 
 
 class Score(typing.TypedDict):
@@ -30,6 +31,7 @@ class Grading(typing.TypedDict):
     visual_quality_and_realism: Score
     consistency_and_cohesion: Score
     emotional_or_thematic_resonance: Score
+    anatomical_correctness: Score
     overall_score: Score
 
 
@@ -40,14 +42,35 @@ class GeminiVerifier(BaseVerifier):
         "visual_quality_and_realism",
         "consistency_and_cohesion",
         "emotional_or_thematic_resonance",
+        "anatomical_correctness",
         "overall_score",
     ]
 
     def __init__(self, seed=1994, model_name="gemini-2.0-flash", **kwargs):
+        # Remove unused sample_file parameter
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        self.sample_files = kwargs.pop("sample_files", None)
+        
+        # Keep system_instruction as text only
+        self.system_instruction = self.verifier_prompt
+        
+        # Store example content separately
+        self.example_content = None
+        if self.sample_files is not None:
+            example_parts = []
+            # Create parts for the examples
+            for sample_file in self.sample_files:
+                example_parts.append(types.Part.from_bytes(
+                    data=convert_to_bytes(sample_file), 
+                    mime_type="image/png"
+                ))
+            # Add explanatory text
+            example_parts.append(types.Part.from_text("These are example images to check for anatomical correctness."))
+            self.example_content = types.Content(parts=example_parts, role="user")
+
         self.generation_config = types.GenerateContentConfig(
-            system_instruction=self.verifier_prompt,
+            system_instruction=self.system_instruction,
             response_mime_type="application/json",
             response_schema=list[Grading],
             max_output_tokens=kwargs.pop("max_new_tokens", None),
@@ -70,26 +93,39 @@ class GeminiVerifier(BaseVerifier):
         return inputs
 
     def score(self, inputs, **kwargs) -> list[dict[str, float]]:
-        # Group the flat list into consecutive chunks of 2.
         def call_generate_content(parts):
             content = types.Content(parts=parts, role="user")
+            
+            # Create the conversation history with examples if available
+            contents = []
+            if self.example_content:
+                contents.append(self.example_content)
+                # Add model response acknowledging examples
+                contents.append(types.Content(
+                    parts=[types.Part.from_text("I'll use these examples as reference for my evaluation of anatomical correctness.")],
+                    role="model"
+                ))
+            
+            # Add the current content to evaluate
+            contents.append(content)
+            
             response = self.client.models.generate_content(
-                model=self.model_name, contents=content, config=self.generation_config
+                model=self.model_name, 
+                contents=contents,
+                config=self.generation_config
             )
             return response.parsed[0]
 
+        # Rest of the method remains the same
         grouped_inputs = [inputs[i : i + 2] for i in range(0, len(inputs), 2)]
         results = []
-        max_workers = len(grouped_inputs)
-        if max_workers > 4:
-            max_workers = 4
+        max_workers = min(len(grouped_inputs), 4)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(call_generate_content, group) for group in grouped_inputs]
             for future in as_completed(futures):
                 try:
                     results.append(future.result())
                 except Exception as e:
-                    # Handle exceptions as appropriate.
                     print(f"An error occurred during API call: {e}")
         return results
 

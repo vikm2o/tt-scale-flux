@@ -11,10 +11,14 @@
     "verifier_args": {
         "name": "gemini", 
         "max_new_tokens": 800,
-        "choice_of_metric": "overall_score"
+        "choice_of_metric": "overall_score",
+        "sample_files": ["Tony_Body_02.png"]
     },
     "search_args": {
-        "search_method": "random",
-        "search_rounds": 4
-    }
+        "search_method": "zero-order",
+        "search_rounds": 8,
+        "threshold": 0.95,
+        "num_neighbors": 8
+    },
+    "lora_file": "tony_lora.safetensors"
 }

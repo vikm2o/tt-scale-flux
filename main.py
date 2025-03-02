@@ -144,6 +144,18 @@ def sample(
 
     return datapoint
 
+def path_exists(path):
+  """
+  Checks if a path (file or directory) exists.
+
+  Args:
+    path: The path to check (string).
+
+  Returns:
+    True if the path exists, False otherwise.
+  """
+  return os.path.exists(path)
+
 
 @torch.no_grad()
 def main():
@@ -170,6 +182,8 @@ def main():
         choice_of_metric,
         current_datetime,
     )
+    lora_file = config.pop("lora_file")
+    print(f"lora file {lora_file}")
     os.makedirs(output_dir, exist_ok=True)
     print(f"Artifacts will be saved to: {output_dir}")
     with open(os.path.join(output_dir, "config.json"), "w") as f:
@@ -188,6 +202,10 @@ def main():
     # === Set up the image-generation pipeline ===
     torch_dtype = TORCH_DTYPE_MAP[config.pop("torch_dtype")]
     pipe = DiffusionPipeline.from_pretrained(pipeline_name, torch_dtype=torch_dtype)
+    if (path_exists(lora_file)):
+        print(f"loading lora file {lora_file}")
+        pipe.load_lora_weights(lora_file,adapter_name="lora")
+
     if not config.get("use_low_gpu_vram", False):
         pipe = pipe.to("cuda:0")
     pipe.set_progress_bar_config(disable=True)

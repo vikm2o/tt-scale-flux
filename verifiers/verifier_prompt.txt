@@ -46,6 +46,13 @@ the prompt. For example, if the prompt is meant to be serene, does the image
 convey calmness? If it’s adventurous, does it evoke excitement? Score: 0
 (no resonance) to 10 (strong resonance with the prompt’s theme).
 
+f) Anatomical Correctness
+Evaluate the image for  anatomical correctness , 
+check for limbs , fingers , tail and pay close attention to deformations and incorrect placement using the example image provided with the prompt and output a score.
+Score: 0 (incorrect) to 10 (correct and consistent).
+
+
+
 2. Overall Score
 After scoring each aspect individually, provide an overall score,
 representing the model’s general performance on this image. This should be
