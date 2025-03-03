@@ -86,12 +86,12 @@ def validate_args(args):
 
 def _validate_verifier_args(config):
     from verifiers import SUPPORTED_VERIFIERS, SUPPORTED_METRICS
-
+    print('SUPPORTED_VERIFIERS',SUPPORTED_VERIFIERS)
     verifier_args = config["verifier_args"]
     supported_verifiers = list(SUPPORTED_VERIFIERS.keys())
     verifier = verifier_args["name"]
     assert verifier in supported_verifiers, (
-        f"Unknown verifier provided: {verifier}, supported ones are: {supported_metrics}."
+        f"Unknown verifier provided: {verifier}, supported ones are: {supported_verifiers}."
     )
 
     supported_metrics = SUPPORTED_METRICS[verifier_args["name"]]
