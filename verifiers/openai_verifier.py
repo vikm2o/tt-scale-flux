@@ -33,7 +33,7 @@ class OpenAIVerifier(BaseVerifier):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
         self.example_images = []
-        print(f"Prompt path: {self.prompt_path}")
+
         print(f"Sample files: {self.sample_files}")
         # Process example images if provided
         if self.sample_files is not None:
