@@ -52,10 +52,13 @@ class WeightedVerifierMixin:
 class WeightedGeminiVerifier(WeightedVerifierMixin, GeminiVerifier):
     """A weighted version of the Gemini verifier."""
     
-    def __init__(self, seed=1994, model_name="gemini-2.0-flash", weights=None, **kwargs):
+    def __init__(self, seed=1994, model_name="gemini-2.0-flash", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
         
+        # Get weights from kwargs
+        weights = kwargs.pop("weights", None)
+        print(f"Using weights: {weights}")
         # Apply weights to system instruction
         if weights:
             modified_prompt = self._apply_weights(weights)
@@ -67,9 +70,12 @@ class WeightedGeminiVerifier(WeightedVerifierMixin, GeminiVerifier):
 class WeightedClaudeVerifier(WeightedVerifierMixin, ClaudeVerifier):
     """A weighted version of the Claude verifier."""
     
-    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20240229", weights=None, **kwargs):
+    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20240229", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
+        # Get weights from kwargs
+        weights = kwargs.pop("weights", None)
+        print(f"Using weights: {weights}")
         
         # Apply weights to system prompt
         if weights:
@@ -80,9 +86,13 @@ class WeightedClaudeVerifier(WeightedVerifierMixin, ClaudeVerifier):
 class WeightedOpenAIVerifier(WeightedVerifierMixin, OpenAIVerifier):
     """A weighted version of the OpenAI verifier."""
     
-    def __init__(self, seed=1994, model_name="gpt-4-vision-preview", weights=None, **kwargs):
+    def __init__(self, seed=1994, model_name="gpt-4-vision-preview", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
+
+        # Get weights from kwargs
+        weights = kwargs.pop("weights", None)
+        print(f"Using weights: {weights}")
         
         # Apply weights to system prompt
         if weights:
@@ -93,10 +103,12 @@ class WeightedOpenAIVerifier(WeightedVerifierMixin, OpenAIVerifier):
 class WeightedQwenVerifier(WeightedVerifierMixin, QwenVerifier):
     """A weighted version of the Qwen verifier."""
     
-    def __init__(self, seed=1994, model_name="qwen-vl-max", weights=None, **kwargs):
+    def __init__(self, seed=1994, model_name="qwen-vl-max", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
-        
+        # Get weights from kwargs
+        weights = kwargs.pop("weights", None)
+        print(f"Using weights: {weights}")
         # Apply weights to prompt
         if weights:
             modified_prompt = self._apply_weights(weights)

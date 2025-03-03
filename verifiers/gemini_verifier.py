@@ -52,6 +52,9 @@ class GeminiVerifier(BaseVerifier):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
         
+        print(f"Prompt path: {self.prompt_path}")
+        print(f"Sample files: {self.sample_files}")
+        
         # Keep system_instruction as text only
         self.system_instruction = self.verifier_prompt
         

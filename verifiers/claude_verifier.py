@@ -48,7 +48,8 @@ class ClaudeVerifier(BaseVerifier):
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
-        
+        print(f"Prompt path: {self.prompt_path}")
+        print(f"Sample files: {self.sample_files}")
         # Set system prompt
         self.system_prompt = self.verifier_prompt
         
