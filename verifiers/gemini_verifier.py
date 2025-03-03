@@ -67,8 +67,8 @@ class GeminiVerifier(BaseVerifier):
                     data=convert_to_bytes(sample_file), 
                     mime_type="image/png"
                 ))
-            # Add explanatory text
-            example_parts.append(types.Part.from_text("These are example images to check for anatomical correctness."))
+            # Add explanatory text - Fix: Use named parameter 'text'
+            example_parts.append(types.Part.from_text(text="These are example images to check for anatomical correctness."))
             self.example_content = types.Content(parts=example_parts, role="user")
 
         self.generation_config = types.GenerateContentConfig(
