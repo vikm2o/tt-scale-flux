@@ -102,9 +102,9 @@ class GeminiVerifier(BaseVerifier):
             contents = []
             if self.example_content:
                 contents.append(self.example_content)
-                # Add model response acknowledging examples
+                # Add model response acknowledging examples - FIX: Add named parameter 'text='
                 contents.append(types.Content(
-                    parts=[types.Part.from_text("I'll use these examples as reference for my evaluation of anatomical correctness.")],
+                    parts=[types.Part.from_text(text="I'll use these examples as reference for my evaluation of anatomical correctness.")],
                     role="model"
                 ))
             
