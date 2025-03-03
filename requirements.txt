@@ -6,3 +6,5 @@ outlines
 accelerate
 protobuf
 sentencepiece
+openai
+anthropic

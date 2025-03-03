@@ -1,36 +1,19 @@
-try:
-    from .gemini_verifier import GeminiVerifier
-    from .weighted_verifier import WeightedGeminiVerifier
-except ImportError as e:
-    GeminiVerifier = None
-    WeightedGeminiVerifier = None
+from .gemini_verifier import GeminiVerifier
+from .weighted_verifier import WeightedGeminiVerifier
 
-try:
-    from .openai_verifier import OpenAIVerifier
-    from .weighted_verifier import WeightedOpenAIVerifier
-except ImportError as e:
-    OpenAIVerifier = None
-    WeightedOpenAIVerifier = None
 
-try:
-    from .qwen_verifier import QwenVerifier
-    from .weighted_verifier import WeightedQwenVerifier
-except ImportError as e:
-    QwenVerifier = None
-    WeightedQwenVerifier = None
+from .openai_verifier import OpenAIVerifier
+from .weighted_verifier import WeightedOpenAIVerifier
 
-try:
-    from .claude_verifier import ClaudeVerifier
-    from .weighted_verifier import WeightedClaudeVerifier
-except ImportError as e:
-    ClaudeVerifier = None
-    WeightedClaudeVerifier = None
+from .qwen_verifier import QwenVerifier
+from .weighted_verifier import WeightedQwenVerifier
 
-# Import the factory function
-try:
-    from .weighted_verifier import create_weighted_verifier
-except ImportError as e:
-    create_weighted_verifier = None
+from .claude_verifier import ClaudeVerifier
+from .weighted_verifier import WeightedClaudeVerifier
+
+
+from .weighted_verifier import create_weighted_verifier
+
 
 # Build dictionary of available verifiers
 SUPPORTED_VERIFIERS = {
