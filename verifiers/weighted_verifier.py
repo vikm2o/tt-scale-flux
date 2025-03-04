@@ -86,7 +86,7 @@ class WeightedClaudeVerifier(WeightedVerifierMixin, ClaudeVerifier):
 class WeightedOpenAIVerifier(WeightedVerifierMixin, OpenAIVerifier):
     """A weighted version of the OpenAI verifier."""
     
-    def __init__(self, seed=1994, model_name="gpt-4-vision-preview", **kwargs):
+    def __init__(self, seed=1994, model_name="gpt-4o-2024-11-20", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
 
