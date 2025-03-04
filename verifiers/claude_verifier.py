@@ -44,7 +44,7 @@ class ClaudeVerifier(BaseVerifier):
         "overall_score",
     ]
 
-    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20240229", **kwargs):
+    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20250219", **kwargs):
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
@@ -171,12 +171,36 @@ class ClaudeVerifier(BaseVerifier):
                 
                 # Parse the JSON response
                 try:
-                    json_response = json.loads(response.content[0].text)
-                    return json_response
+                    # Add debug print to see raw response
+                    print(f"Raw response content: {response.content}")
+                    
+                    # Check if response has content
+                    if not response.content or len(response.content) == 0:
+                        print("Empty response received from Claude API")
+                        return None
+                    
+                    # Check the structure of the response
+                    content_text = response.content[0].text
+                    print(f"Content text: {content_text}")
+                    
+                    # Only try to parse if we have content
+                    if content_text and content_text.strip():
+                        json_response = json.loads(content_text)
+                        print(f"Parsed response: {json_response}")
+                        return json_response
+                    else:
+                        print("Empty content text in response")
+                        return None
                 except Exception as e:
                     print(f"Error parsing Claude response: {e}")
-                    print(f"Raw response: {response.content[0].text}")
-                    return None
+                    print(f"Raw response type: {type(response)}")
+                    print(f"Raw response content: {response.content}")
+                    
+                    # Try to return the raw text if JSON parsing fails
+                    try:
+                        return {"raw_text": response.content[0].text}
+                    except:
+                        return None
                     
             except Exception as e:
                 print(f"Error calling Claude API: {e}")
@@ -189,6 +213,7 @@ class ClaudeVerifier(BaseVerifier):
             for future in as_completed(futures):
                 try:
                     result = self.parse_json(future.result())
+                    print(f"Result: {result}")
                     if result:
                         results.append(result)
                 except Exception as e:
