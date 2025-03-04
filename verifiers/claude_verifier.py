@@ -165,13 +165,36 @@ class ClaudeVerifier(BaseVerifier):
                 
                 # Parse the JSON response
                 try:
-                    json_response = json.loads(response.content[0].text)
-                    print(f"Response: {json_response}")
-                    return json_response
+                    # Add debug print to see raw response
+                    print(f"Raw response content: {response.content}")
+                    
+                    # Check if response has content
+                    if not response.content or len(response.content) == 0:
+                        print("Empty response received from Claude API")
+                        return None
+                    
+                    # Check the structure of the response
+                    content_text = response.content[0].text
+                    print(f"Content text: {content_text}")
+                    
+                    # Only try to parse if we have content
+                    if content_text and content_text.strip():
+                        json_response = json.loads(content_text)
+                        print(f"Parsed response: {json_response}")
+                        return json_response
+                    else:
+                        print("Empty content text in response")
+                        return None
                 except Exception as e:
                     print(f"Error parsing Claude response: {e}")
-                    print(f"Raw response: {response.content[0].text}")
-                    return None
+                    print(f"Raw response type: {type(response)}")
+                    print(f"Raw response content: {response.content}")
+                    
+                    # Try to return the raw text if JSON parsing fails
+                    try:
+                        return {"raw_text": response.content[0].text}
+                    except:
+                        return None
                     
             except Exception as e:
                 print(f"Error calling Claude API: {e}")
