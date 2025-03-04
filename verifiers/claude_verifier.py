@@ -133,21 +133,47 @@ class ClaudeVerifier(BaseVerifier):
             # Add current content to evaluate
             messages.append({"role": "user", "content": content})
             
-            response = self.client.messages.create(
-                model=self.model_name,
-                max_tokens=self.max_tokens,
-                system=self.system_prompt,
-                messages=messages,
-                temperature=self.temperature,
-                response_format={"type": "json_object"}
-            )
+            # Modify system prompt to request JSON format
+            system_prompt = self.system_prompt
+            if not "JSON" in system_prompt and not "json" in system_prompt:
+                system_prompt += "\nPlease format your response as a valid JSON object."
             
-            # Parse the JSON response
             try:
-                json_response = json.loads(response.content[0].text)
-                return json_response
+                # Try with different parameter options based on SDK version
+                try:
+                    response = self.client.messages.create(
+                        model=self.model_name,
+                        max_tokens=self.max_tokens,
+                        system=system_prompt,
+                        messages=messages,
+                        temperature=self.temperature,
+                        # Remove response_format parameter that's causing the error
+                    )
+                except TypeError:
+                    # If that fails, try an alternative approach for older SDK versions
+                    import anthropic
+                    # Print SDK version for debugging
+                    print(f"Using Anthropic SDK version: {anthropic.__version__}")
+                    
+                    response = self.client.messages.create(
+                        model=self.model_name,
+                        max_tokens=self.max_tokens,
+                        system=system_prompt,
+                        messages=messages,
+                        temperature=self.temperature,
+                    )
+                
+                # Parse the JSON response
+                try:
+                    json_response = json.loads(response.content[0].text)
+                    return json_response
+                except Exception as e:
+                    print(f"Error parsing Claude response: {e}")
+                    print(f"Raw response: {response.content[0].text}")
+                    return None
+                    
             except Exception as e:
-                print(f"Error parsing Claude response: {e}")
+                print(f"Error calling Claude API: {e}")
                 return None
 
         results = []
