@@ -273,8 +273,8 @@ class ClaudeVerifier(BaseVerifier):
             futures = [executor.submit(call_claude_api, input_content) for input_content in inputs]
             for future in as_completed(futures):
                 try:
-                    result = future.result()  # Don't use parse_json here, already handled
-                    print(f"Result type: {type(result)}")
+                    result = future.result() # Get the result
+                    print(f"Result : {(result)}")
                     if result:
                         results.append(result)
                 except Exception as e:
