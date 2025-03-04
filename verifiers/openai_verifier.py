@@ -123,6 +123,7 @@ class OpenAIVerifier(BaseVerifier):
             for future in as_completed(futures):
                 try:
                     result = future.result()
+                    print(f"Result: {result}")
                     if result:
                         results.append(result)
                 except Exception as e:

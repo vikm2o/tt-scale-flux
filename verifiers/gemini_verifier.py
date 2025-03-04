@@ -126,9 +126,12 @@ class GeminiVerifier(BaseVerifier):
             futures = [executor.submit(call_generate_content, group) for group in grouped_inputs]
             for future in as_completed(futures):
                 try:
-                    results.append(future.result())
+                    res_value = future.result()
+                    print(f"Result: {res_value}")
+                    results.append(res_value)
                 except Exception as e:
                     print(f"An error occurred during API call: {e}")
+        
         return results
 
 
