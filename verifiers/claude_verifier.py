@@ -44,7 +44,7 @@ class ClaudeVerifier(BaseVerifier):
         "overall_score",
     ]
 
-    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20240229", **kwargs):
+    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20250219", **kwargs):
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
