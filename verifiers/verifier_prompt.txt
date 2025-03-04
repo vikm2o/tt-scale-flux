@@ -48,8 +48,8 @@ convey calmness? If it’s adventurous, does it evoke excitement? Score: 0
 
 f) Anatomical Correctness
 Evaluate the image for  anatomical correctness , 
-check for limbs , fingers , tail and pay close attention to deformations and incorrect placement using the example image provided with the prompt and output a score.
-Score: 0 (incorrect) to 10 (correct and consistent).
+check for limbs , fingers , torso, body shape, tail and pay close attention to deformations and incorrect placement using the example image provided with the prompt and output a score.
+Score: 0 (anatomically incorrect) to 10 (anatomically correct).
 
 
 
