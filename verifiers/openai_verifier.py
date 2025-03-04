@@ -28,7 +28,7 @@ class OpenAIVerifier(BaseVerifier):
         "overall_score",
     ]
 
-    def __init__(self, seed=1994, model_name="gpt-4-vision-preview", **kwargs):
+    def __init__(self, seed=1994, model_name="gpt-4o-2024-11-20", **kwargs):
         super().__init__(seed=seed, prompt_path=kwargs.pop("prompt_path", None))
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.sample_files = kwargs.pop("sample_files", None)
