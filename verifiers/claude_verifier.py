@@ -76,7 +76,13 @@ class ClaudeVerifier(BaseVerifier):
         self.model_name = model_name
         self.max_tokens = kwargs.pop("max_new_tokens", 4096)
         self.temperature = kwargs.pop("temperature", 0.0)
-
+    def parse_json(self,s):
+        s = s[next(idx for idx, c in enumerate(s) if c in "{["):]
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError as e:
+            return json.loads(s[:e.pos])
+    
     def prepare_inputs(self, images: Union[List[Image.Image], Image.Image], prompts: Union[List[str], str], **kwargs):
         """Prepare inputs for the API from given prompts and images."""
         inputs = []
@@ -182,7 +188,7 @@ class ClaudeVerifier(BaseVerifier):
             futures = [executor.submit(call_claude_api, input_content) for input_content in inputs]
             for future in as_completed(futures):
                 try:
-                    result = future.result()
+                    result = self.parse_json(future.result())
                     if result:
                         results.append(result)
                 except Exception as e:
