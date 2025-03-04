@@ -70,7 +70,7 @@ class WeightedGeminiVerifier(WeightedVerifierMixin, GeminiVerifier):
 class WeightedClaudeVerifier(WeightedVerifierMixin, ClaudeVerifier):
     """A weighted version of the Claude verifier."""
     
-    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20240229", **kwargs):
+    def __init__(self, seed=1994, model_name="claude-3-7-sonnet-20250219", **kwargs):
         # Initialize the base verifier
         super().__init__(seed=seed, model_name=model_name, **kwargs)
         # Get weights from kwargs
