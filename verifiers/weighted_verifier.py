@@ -62,6 +62,7 @@ class WeightedGeminiVerifier(WeightedVerifierMixin, GeminiVerifier):
         # Apply weights to system instruction
         if weights:
             modified_prompt = self._apply_weights(weights)
+            print(f"Modified prompt: {modified_prompt}")
             self.system_instruction = modified_prompt
             # Update the generation config with modified system instruction
             self.generation_config.system_instruction = self.system_instruction
@@ -80,6 +81,7 @@ class WeightedClaudeVerifier(WeightedVerifierMixin, ClaudeVerifier):
         # Apply weights to system prompt
         if weights:
             modified_prompt = self._apply_weights(weights)
+            print(f"Modified prompt: {modified_prompt}")
             self.system_prompt = modified_prompt
 
 
@@ -97,6 +99,7 @@ class WeightedOpenAIVerifier(WeightedVerifierMixin, OpenAIVerifier):
         # Apply weights to system prompt
         if weights:
             modified_prompt = self._apply_weights(weights)
+            print(f"Modified prompt: {modified_prompt}")
             self.system_message = modified_prompt
 
 
