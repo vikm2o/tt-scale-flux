@@ -139,72 +139,133 @@ class ClaudeVerifier(BaseVerifier):
             # Add current content to evaluate
             messages.append({"role": "user", "content": content})
             
-            # Modify system prompt to request JSON format
+            # Make system prompt explicitly request JSON with specific format
             system_prompt = self.system_prompt
-            if not "JSON" in system_prompt and not "json" in system_prompt:
-                system_prompt += "\nPlease format your response as a valid JSON object."
+            system_prompt += "\n\nIMPORTANT: Your response MUST be a valid JSON object matching this structure:\n"
+            system_prompt += '''{
+                "accuracy_to_prompt": {"explanation": "string", "score": number},
+                "creativity_and_originality": {"explanation": "string", "score": number},
+                "visual_quality_and_realism": {"explanation": "string", "score": number},
+                "consistency_and_cohesion": {"explanation": "string", "score": number},
+                "emotional_or_thematic_resonance": {"explanation": "string", "score": number},
+                "anatomical_correctness": {"explanation": "string", "score": number},
+                "overall_score": {"explanation": "string", "score": number}
+            }'''
             
             try:
-                # Try with different parameter options based on SDK version
-                try:
-                    response = self.client.messages.create(
-                        model=self.model_name,
-                        max_tokens=self.max_tokens,
-                        system=system_prompt,
-                        messages=messages,
-                        temperature=self.temperature,
-                        # Remove response_format parameter that's causing the error
-                    )
-                except TypeError:
-                    # If that fails, try an alternative approach for older SDK versions
-                    import anthropic
-                    # Print SDK version for debugging
-                    print(f"Using Anthropic SDK version: {anthropic.__version__}")
-                    
-                    response = self.client.messages.create(
-                        model=self.model_name,
-                        max_tokens=self.max_tokens,
-                        system=system_prompt,
-                        messages=messages,
-                        temperature=self.temperature,
-                    )
+                # Get SDK version
+                import anthropic
+                sdk_version = anthropic.__version__
+                print(f"Using Anthropic SDK version: {sdk_version}")
                 
-                # Parse the JSON response
-                try:
-                    # Add debug print to see raw response
-                    print(f"Raw response content: {response.content}")
-                    
-                    # Check if response has content
-                    if not response.content or len(response.content) == 0:
-                        print("Empty response received from Claude API")
-                        return None
-                    
-                    # Check the structure of the response
-                    content_text = response.content[0].text
-                    print(f"Content text: {content_text}")
-                    
-                    # Only try to parse if we have content
-                    if content_text and content_text.strip():
-                        json_response = json.loads(content_text)
-                        print(f"Parsed response: {json_response}")
-                        return json_response
-                    else:
-                        print("Empty content text in response")
-                        return None
-                except Exception as e:
-                    print(f"Error parsing Claude response: {e}")
-                    print(f"Raw response type: {type(response)}")
-                    print(f"Raw response content: {response.content}")
-                    
-                    # Try to return the raw text if JSON parsing fails
+                # Different API call based on SDK version
+                if hasattr(self.client.messages, 'create'):
+                    # For newer API
                     try:
-                        return {"raw_text": response.content[0].text}
-                    except:
-                        return None
+                        # Parse version more carefully
+                        version_parts = sdk_version.split('.')
+                        major, minor = int(version_parts[0]), int(version_parts[1])
+                        
+                        if major > 0 or (major == 0 and minor >= 5):
+                            # Use 'format' parameter for SDK 0.5.0+
+                            response = self.client.messages.create(
+                                model=self.model_name,
+                                max_tokens=self.max_tokens,
+                                system=system_prompt,
+                                messages=messages,
+                                temperature=self.temperature
+                            )
+                        else:
+                            # For versions like 0.49.0, don't use 'format' parameter
+                            print(f"Using SDK version {sdk_version} without format parameter")
+                            response = self.client.messages.create(
+                                model=self.model_name,
+                                max_tokens=self.max_tokens,
+                                system=system_prompt,
+                                messages=messages,
+                                temperature=self.temperature
+                            )
+                    except Exception as e:
+                        print(f"Error with API call: {e}")
+                        # Last resort fallback
+                        response = self.client.messages.create(
+                            model=self.model_name,
+                            max_tokens=self.max_tokens,
+                            system=system_prompt,
+                            messages=messages,
+                            temperature=self.temperature
+                        )
+                else:
+                    # For even older SDK versions
+                    response = self.client.messages.create(
+                        model=self.model_name,
+                        max_tokens=self.max_tokens,
+                        system=system_prompt,
+                        messages=messages,
+                        temperature=self.temperature
+                    )
+                    
+                # Parse response
+                if hasattr(response, 'content') and response.content:
+                    content_text = response.content[0].text.strip()
+                    print(f"Raw response text (first 100 chars): {content_text[:100]}...")
+                    
+                    # Try to extract JSON from text (some models add markdown code blocks)
+                    import re
+                    json_pattern = r'```(?:json)?\s*([\s\S]*?)\s*```'
+                    json_match = re.search(json_pattern, content_text)
+                    
+                    if json_match:
+                        # Extract JSON from code block
+                        json_text = json_match.group(1).strip()
+                        print("Found JSON in code block")
+                    else:
+                        # Try to use the whole text
+                        json_text = content_text
+                    
+                    # Try parsing the JSON
+                    try:
+                        json_response = json.loads(json_text)
+                        print("Successfully parsed JSON")
+                        return json_response
+                    except json.JSONDecodeError as e:
+                        print(f"JSON error: {e}")
+                        # As a fallback, create a basic structure with the raw text
+                        return {
+                            "accuracy_to_prompt": {"explanation": "Error parsing response", "score": 0.0},
+                            "creativity_and_originality": {"explanation": "Error parsing response", "score": 0.0},
+                            "visual_quality_and_realism": {"explanation": "Error parsing response", "score": 0.0},
+                            "consistency_and_cohesion": {"explanation": "Error parsing response", "score": 0.0},
+                            "emotional_or_thematic_resonance": {"explanation": "Error parsing response", "score": 0.0},
+                            "anatomical_correctness": {"explanation": "Error parsing response", "score": 0.0},
+                            "overall_score": {"explanation": "Error parsing response", "score": 0.0},
+                            "raw_text": content_text[:500]  # Include some of the raw text
+                        }
+                else:
+                    print("Response has no content")
+                    # Return empty structure
+                    return {
+                        "accuracy_to_prompt": {"explanation": "No response received", "score": 0.0},
+                        "creativity_and_originality": {"explanation": "No response received", "score": 0.0},
+                        "visual_quality_and_realism": {"explanation": "No response received", "score": 0.0},
+                        "consistency_and_cohesion": {"explanation": "No response received", "score": 0.0},
+                        "emotional_or_thematic_resonance": {"explanation": "No response received", "score": 0.0},
+                        "anatomical_correctness": {"explanation": "No response received", "score": 0.0},
+                        "overall_score": {"explanation": "No response received", "score": 0.0}
+                    }
                     
             except Exception as e:
                 print(f"Error calling Claude API: {e}")
-                return None
+                # Return empty structure
+                return {
+                    "accuracy_to_prompt": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "creativity_and_originality": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "visual_quality_and_realism": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "consistency_and_cohesion": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "emotional_or_thematic_resonance": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "anatomical_correctness": {"explanation": f"API error: {str(e)}", "score": 0.0},
+                    "overall_score": {"explanation": f"API error: {str(e)}", "score": 0.0}
+                }
 
         results = []
         max_workers = min(len(inputs), 4)  # Limit concurrency
@@ -212,12 +273,35 @@ class ClaudeVerifier(BaseVerifier):
             futures = [executor.submit(call_claude_api, input_content) for input_content in inputs]
             for future in as_completed(futures):
                 try:
-                    result = self.parse_json(future.result())
-                    print(f"Result: {result}")
+                    result = future.result()  # Don't use parse_json here, already handled
+                    print(f"Result type: {type(result)}")
                     if result:
                         results.append(result)
                 except Exception as e:
-                    print(f"An error occurred during API call: {e}")
+                    print(f"An error occurred processing future: {e}")
+                    # Add a fallback result
+                    results.append({
+                        "accuracy_to_prompt": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "creativity_and_originality": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "visual_quality_and_realism": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "consistency_and_cohesion": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "emotional_or_thematic_resonance": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "anatomical_correctness": {"explanation": f"Processing error: {str(e)}", "score": 0.0},
+                        "overall_score": {"explanation": f"Processing error: {str(e)}", "score": 0.0}
+                    })
+        
+        # Ensure we return the same number of results as inputs
+        if len(results) < len(inputs):
+            for _ in range(len(inputs) - len(results)):
+                results.append({
+                    "accuracy_to_prompt": {"explanation": "Missing result", "score": 0.0},
+                    "creativity_and_originality": {"explanation": "Missing result", "score": 0.0},
+                    "visual_quality_and_realism": {"explanation": "Missing result", "score": 0.0},
+                    "consistency_and_cohesion": {"explanation": "Missing result", "score": 0.0},
+                    "emotional_or_thematic_resonance": {"explanation": "Missing result", "score": 0.0},
+                    "anatomical_correctness": {"explanation": "Missing result", "score": 0.0},
+                    "overall_score": {"explanation": "Missing result", "score": 0.0}
+                })
         
         return results
 
