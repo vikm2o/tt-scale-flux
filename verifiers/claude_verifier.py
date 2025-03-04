@@ -166,6 +166,7 @@ class ClaudeVerifier(BaseVerifier):
                 # Parse the JSON response
                 try:
                     json_response = json.loads(response.content[0].text)
+                    print(f"Response: {json_response}")
                     return json_response
                 except Exception as e:
                     print(f"Error parsing Claude response: {e}")
@@ -183,6 +184,7 @@ class ClaudeVerifier(BaseVerifier):
             for future in as_completed(futures):
                 try:
                     result = future.result()
+                    print(f"Result: {result}")
                     if result:
                         results.append(result)
                 except Exception as e:
