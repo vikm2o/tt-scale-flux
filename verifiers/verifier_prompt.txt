@@ -47,8 +47,28 @@ convey calmness? If it’s adventurous, does it evoke excitement? Score: 0
 (no resonance) to 10 (strong resonance with the prompt’s theme).
 
 f) Anatomical Correctness
-Evaluate the image for  anatomical correctness , 
-check for limbs , fingers , torso, body shape, tail and pay close attention to deformations and incorrect placement using the example image provided with the prompt and output a score.
+Evaluate the image for  anatomical correctness.
+Follwing are the key elements. Use the example images to analyze these key elements and output a Score.
+
+Physical Appearance:
+    Anthropomorphic Tiger: Athletic build, bright orange fur with black stripes, white chest/muzzle, blue nose.
+    Signature Bandana: Red with "TONY" text, acting as a brand identifier and movement indicator.
+    Expressive Face: Yellow eyes, defined eyebrows, broad nose, long whiskers, friendly smile.
+Design Considerations:
+    Silhouette Recognizability: Design is recognizable from any angle.
+    Form Definition: Stripes define form and suggest musculature.
+    Versatile Posing: Ability to transition between athletic/dynamic and friendly/approachable poses.
+    Proportional Consistency: Works in 2D and 3D at various scales.
+Personality & Brand:
+    Athletic & Approachable: Balances strength with approachability through design choices.
+    Brand Identifier: Colors, stripes, and bandana create instant brand recognition.
+    Cross-Media Adaptability: Works across different media and contexts.
+    Broad Appeal: Maintains appeal to children and adults.
+Tail Function:
+    Counter-Balance: Opposes major body movements.
+    Dynamic Curves: Utilizes S-curves for visual interest.
+    Follow-Through: Enhances the action of the pose.
+
 Score: 0 (anatomically incorrect) to 10 (anatomically correct).
 
 
